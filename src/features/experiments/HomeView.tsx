@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export function HomeView() {
   const experiments = useAppStore((s) => s.experiments);
@@ -15,6 +15,9 @@ export function HomeView() {
     loadStocks();
     loadCultures();
   }, [loadStocks, loadCultures]);
+
+  const [recentsCleared, setRecentsCleared] = useState(false);
+  const activeExperiments = experiments.filter(e => !e.archived);
 
   const lowStocks = stocks.filter((s) => s.qty <= s.reorder_at * 1.5);
   const overdueCultures = cultures.filter((c) => {
@@ -93,11 +96,19 @@ export function HomeView() {
       </div>
 
       {/* Recent Experiments */}
-      {experiments.length > 0 && (
+      {activeExperiments.length > 0 && !recentsCleared && (
         <div className="mb-8">
-          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Recent Experiments</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Recent Experiments</h2>
+            <button
+              onClick={() => setRecentsCleared(true)}
+              className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+            >
+              Clear
+            </button>
+          </div>
           <div className="space-y-1.5">
-            {experiments.slice(0, 8).map((exp) => (
+            {activeExperiments.slice(0, 8).map((exp) => (
               <button
                 key={exp.id}
                 onClick={() => handleOpenExperiment(exp.id)}

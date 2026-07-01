@@ -576,6 +576,18 @@ fn delete_experiment(
 }
 
 #[tauri::command]
+fn rename_experiment(
+    state: tauri::State<'_, AppState>,
+    id: String,
+    name: String,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let payload = serde_json::json!({ "name": name }).to_string();
+    db.append_event("experiment", &id, "renamed", &payload, None)?;
+    Ok(())
+}
+
+#[tauri::command]
 fn archive_experiment(
     state: tauri::State<'_, AppState>,
     id: String,
@@ -661,6 +673,7 @@ pub fn run() {
             list_experiments,
             get_experiment,
             delete_experiment,
+            rename_experiment,
             archive_experiment,
             unarchive_experiment,
             import_dataset,

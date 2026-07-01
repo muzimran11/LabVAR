@@ -408,6 +408,13 @@ impl Database {
                     .map_err(|e| format!("Failed to fold experiment unarchive: {}", e))?;
             }
 
+            ("experiment", "renamed") => {
+                let new_name = payload_json["name"].as_str().unwrap_or("");
+                self.conn
+                    .execute("UPDATE experiments SET name = ?1 WHERE id = ?2", params![new_name, entity_id])
+                    .map_err(|e| format!("Failed to fold experiment rename: {}", e))?;
+            }
+
             _ => {
                 // Unknown entity_type/event_type pair — event is still recorded,
                 // but no projection is updated. This is intentional: new event

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { deleteExperiment, archiveExperiment, unarchiveExperiment } from '@/lib/invoke';
+import { deleteExperiment, archiveExperiment, unarchiveExperiment, renameExperiment } from '@/lib/invoke';
 
 const NAV_ITEMS = [
   { id: 'inventory' as const, label: 'Inventory', icon: '\u{1F4E6}' },
@@ -18,6 +18,16 @@ export function Sidebar() {
 
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
 
   const activeExperiments = experiments.filter(e => !e.archived);
   const archivedExperiments = experiments.filter(e => e.archived);
@@ -53,29 +63,75 @@ export function Sidebar() {
           )}
           {activeExperiments.map((exp) => (
             <div key={exp.id} className="relative group">
-              <button
-                onClick={() => handleExperimentClick(exp.id)}
-                className={`w-full text-left px-2.5 py-1.5 rounded text-sm truncate transition-colors pr-7 ${
-                  view === 'experiment' && activeExperimentId === exp.id
-                    ? 'bg-teal-500/15 text-teal-400 font-medium'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-                }`}
-              >
-                {exp.name}
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpenId(menuOpenId === exp.id ? null : exp.id);
-                }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z" />
-                </svg>
-              </button>
+              {renamingId === exp.id ? (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (renameValue.trim() && renameValue.trim() !== exp.name) {
+                      await renameExperiment(exp.id, renameValue.trim());
+                      await loadExperiments();
+                    }
+                    setRenamingId(null);
+                  }}
+                  className="px-1"
+                >
+                  <input
+                    ref={renameInputRef}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={async () => {
+                      if (renameValue.trim() && renameValue.trim() !== exp.name) {
+                        await renameExperiment(exp.id, renameValue.trim());
+                        await loadExperiments();
+                      }
+                      setRenamingId(null);
+                    }}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setRenamingId(null); }}
+                    className="w-full px-1.5 py-1 text-sm bg-zinc-800 border border-teal-600 rounded text-zinc-200 focus:outline-none"
+                  />
+                </form>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleExperimentClick(exp.id)}
+                    onDoubleClick={() => {
+                      setRenamingId(exp.id);
+                      setRenameValue(exp.name);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded text-sm truncate transition-colors pr-7 ${
+                      view === 'experiment' && activeExperimentId === exp.id
+                        ? 'bg-teal-500/15 text-teal-400 font-medium'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                    }`}
+                  >
+                    {exp.name}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenId(menuOpenId === exp.id ? null : exp.id);
+                    }}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z" />
+                    </svg>
+                  </button>
+                </>
+              )}
               {menuOpenId === exp.id && (
                 <div className="absolute right-0 top-full mt-0.5 z-50 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-[140px]">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenId(null);
+                      setRenamingId(exp.id);
+                      setRenameValue(exp.name);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 transition-colors"
+                  >
+                    Rename
+                  </button>
                   <button
                     onClick={async (e) => {
                       e.stopPropagation();

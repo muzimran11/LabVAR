@@ -28,6 +28,10 @@ export async function createExperiment(name: string): Promise<string> {
 }
 
 // ---- Experiment Management ----
+export async function renameExperiment(id: string, name: string): Promise<void> {
+  return invoke('rename_experiment', { id, name });
+}
+
 export async function deleteExperiment(id: string): Promise<void> {
   return invoke('delete_experiment', { id });
 }
