@@ -2,24 +2,22 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { importDataset, getDataset } from '@/lib/invoke';
 import { DataTable, createColumnsFromKeys } from '@/components/DataTable';
+import { parseTable } from '@/lib/labdata';
 
-function parseCSV(csv: string): { columns: string[]; rows: Record<string, unknown>[] } {
-  const lines = csv.trim().split('\n');
-  if (lines.length === 0) return { columns: [], rows: [] };
+/**
+ * Read a picked file into CSV text. Real spreadsheets (.xlsx/.xls) are binary,
+ * so file.text() would produce garbage — we convert them to CSV with SheetJS.
+ */
+async function fileToCsv(file: File): Promise<string> {
+  const isExcel = /\.(xlsx|xlsm|xlsb|xls)$/i.test(file.name);
+  if (!isExcel) return await file.text();
 
-  const columns = lines[0].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
-  const rows = lines.slice(1).map((line) => {
-    const values = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
-    const row: Record<string, unknown> = {};
-    columns.forEach((col, i) => {
-      const val = values[i] ?? '';
-      const num = Number(val);
-      row[col] = val !== '' && !isNaN(num) ? num : val;
-    });
-    return row;
-  });
-
-  return { columns, rows };
+  const XLSX = await import('xlsx');
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array' });
+  const first = wb.SheetNames[0];
+  if (!first) throw new Error('The spreadsheet has no sheets.');
+  return XLSX.utils.sheet_to_csv(wb.Sheets[first]);
 }
 
 export function DataTab() {
@@ -55,7 +53,7 @@ export function DataTab() {
 
   const parsedData = useMemo(() => {
     if (!activeDataset?.csv_data) return { columns: [], rows: [] };
-    return parseCSV(activeDataset.csv_data);
+    return parseTable(activeDataset.csv_data);
   }, [activeDataset?.csv_data]);
 
   const columns = useMemo(
@@ -77,8 +75,16 @@ export function DataTab() {
     setImporting(true);
     setError('');
     try {
-      await importDataset(activeExperimentId, datasetName.trim(), csvText.trim());
+      const content = csvText.trim();
+      const check = parseTable(content);
+      if (check.columns.length === 0 || check.rows.length === 0) {
+        setError('No rows detected. Check that the first line is a header and rows follow below.');
+        setImporting(false);
+        return;
+      }
+      const newId = await importDataset(activeExperimentId, datasetName.trim(), content);
       await loadDatasets(activeExperimentId);
+      setActiveDataset(newId);
       setCsvText('');
       setDatasetName('');
       setShowImport(false);
@@ -87,7 +93,7 @@ export function DataTab() {
     } finally {
       setImporting(false);
     }
-  }, [activeExperimentId, csvText, datasetName, loadDatasets]);
+  }, [activeExperimentId, csvText, datasetName, loadDatasets, setActiveDataset]);
 
   const handleFileImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,10 +102,20 @@ export function DataTab() {
     setImporting(true);
     setError('');
     try {
-      const text = await file.text();
-      const name = datasetName.trim() || file.name.replace(/\.csv$/i, '');
-      await importDataset(activeExperimentId, name, text.trim());
+      const content = (await fileToCsv(file)).trim();
+      const check = parseTable(content);
+      if (check.columns.length === 0 || check.rows.length === 0) {
+        setError(
+          `"${file.name}" imported with no usable rows. Make sure it's a spreadsheet (.csv, .tsv, or .xlsx) with a header row.`
+        );
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setImporting(false);
+        return;
+      }
+      const name = datasetName.trim() || file.name.replace(/\.(csv|tsv|txt|xlsx|xlsm|xlsb|xls)$/i, '');
+      const newId = await importDataset(activeExperimentId, name, content);
       await loadDatasets(activeExperimentId);
+      setActiveDataset(newId);
       setDatasetName('');
       setShowImport(false);
       // Reset file input
@@ -109,14 +125,14 @@ export function DataTab() {
     } finally {
       setImporting(false);
     }
-  }, [activeExperimentId, datasetName, loadDatasets]);
+  }, [activeExperimentId, datasetName, loadDatasets, setActiveDataset]);
 
   return (
     <div className="space-y-4">
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv,.tsv,.txt"
+        accept=".csv,.tsv,.txt,.xlsx,.xlsm,.xlsb,.xls"
         onChange={handleFileImport}
         className="hidden"
       />
@@ -173,7 +189,7 @@ export function DataTab() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
               </svg>
-              Choose .csv file
+              Choose spreadsheet (.csv / .xlsx)
             </button>
             <span className="text-xs text-zinc-600">or paste below</span>
           </div>
