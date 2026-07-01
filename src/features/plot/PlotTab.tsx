@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { saveFigure } from '@/lib/invoke';
+import { saveFigure, getDataset } from '@/lib/invoke';
 import {
   DndContext,
   DragOverlay,
@@ -341,6 +341,22 @@ export function PlotTab() {
   const [saving, setSaving] = useState(false);
 
   const activeDataset = datasets.find((d) => d.id === activeDatasetId);
+
+  // If csv_data is missing, fetch the full dataset
+  useEffect(() => {
+    if (activeDatasetId && activeDataset && !activeDataset.csv_data) {
+      getDataset(activeDatasetId).then((full) => {
+        if (full?.csv_data) {
+          useAppStore.setState((s) => ({
+            datasets: s.datasets.map((d) =>
+              d.id === activeDatasetId ? { ...d, csv_data: full.csv_data } : d
+            ),
+          }));
+        }
+      }).catch(console.error);
+    }
+  }, [activeDatasetId, activeDataset?.csv_data]);
+
   const parsed = useMemo(() => {
     if (!activeDataset?.csv_data) return { columns: [], rows: [] };
     return parseCSV(activeDataset.csv_data);

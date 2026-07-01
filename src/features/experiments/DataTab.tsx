@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { importDataset } from '@/lib/invoke';
+import { importDataset, getDataset } from '@/lib/invoke';
 import { DataTable, createColumnsFromKeys } from '@/components/DataTable';
 
 function parseCSV(csv: string): { columns: string[]; rows: Record<string, unknown>[] } {
@@ -37,6 +37,21 @@ export function DataTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeDataset = datasets.find((d) => d.id === activeDatasetId);
+
+  // If csv_data is missing (list endpoint didn't include it), fetch the full dataset
+  useEffect(() => {
+    if (activeDatasetId && activeDataset && !activeDataset.csv_data) {
+      getDataset(activeDatasetId).then((full) => {
+        if (full?.csv_data) {
+          useAppStore.setState((s) => ({
+            datasets: s.datasets.map((d) =>
+              d.id === activeDatasetId ? { ...d, csv_data: full.csv_data } : d
+            ),
+          }));
+        }
+      }).catch(console.error);
+    }
+  }, [activeDatasetId, activeDataset?.csv_data]);
 
   const parsedData = useMemo(() => {
     if (!activeDataset?.csv_data) return { columns: [], rows: [] };

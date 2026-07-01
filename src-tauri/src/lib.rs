@@ -200,14 +200,19 @@ fn list_datasets(
     Ok(rows
         .into_iter()
         .map(
-            |(id, experiment_id, name, row_count, col_count, sha256, _state_json)| Dataset {
-                id,
-                experiment_id,
-                name,
-                rows: row_count,
-                cols: col_count,
-                sha256,
-                csv_data: None, // Don't return CSV in list view
+            |(id, experiment_id, name, row_count, col_count, sha256, state_json)| {
+                let csv_data = serde_json::from_str::<serde_json::Value>(&state_json)
+                    .ok()
+                    .and_then(|v| v["csv_data"].as_str().map(String::from));
+                Dataset {
+                    id,
+                    experiment_id,
+                    name,
+                    rows: row_count,
+                    cols: col_count,
+                    sha256,
+                    csv_data,
+                }
             },
         )
         .collect())
