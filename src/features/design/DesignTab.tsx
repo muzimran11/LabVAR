@@ -201,10 +201,13 @@ export function DesignTab() {
       {/* Section 3: Hypothesis */}
       <section>
         <SectionHeader number={3} title="Hypothesis" />
+        <p className="text-xs text-zinc-500 mb-2">
+          The effect you expect. e.g. &ldquo;FUdR upregulates <em>numr-1</em>.&rdquo;
+        </p>
         <textarea
           value={hypothesis || existingHyp?.hypothesis || ''}
           onChange={(e) => setHypothesis(e.target.value)}
-          placeholder="State your research hypothesis..."
+          placeholder="FUdR treatment increases numr-1 expression."
           rows={3}
           className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600/30 resize-none"
         />
@@ -213,22 +216,29 @@ export function DesignTab() {
       {/* Section 4: Null Hypothesis (H0) */}
       <section>
         <SectionHeader number={4} title="Null Hypothesis (H&#x2080;)" />
+        <p className="text-xs text-zinc-500 mb-2">
+          The &ldquo;no effect&rdquo; version you&rsquo;re trying to reject.
+        </p>
         <textarea
           value={nullH || existingHyp?.null_h || ''}
           onChange={(e) => setNullH(e.target.value)}
-          placeholder="There is no significant difference / relationship between..."
+          placeholder="numr-1 expression does not differ between FUdR-treated and control."
           rows={2}
           className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600/30 resize-none"
         />
       </section>
 
-      {/* Section 5: Alternative Hypothesis (H1) */}
+      {/* Section 5: Prediction — what result would prove the hypothesis */}
       <section>
-        <SectionHeader number={5} title="Alternative Hypothesis (H&#x2081;)" />
+        <SectionHeader number={5} title="Prediction (H&#x2081;) — what result would prove it" />
+        <p className="text-xs text-zinc-500 mb-2">
+          The concrete, measurable outcome that would support the hypothesis over the null.
+          e.g. &ldquo;24&nbsp;h FUdR-treated worms show higher <em>numr-1</em> expression than control.&rdquo;
+        </p>
         <textarea
           value={altH || existingHyp?.alt_h || ''}
           onChange={(e) => setAltH(e.target.value)}
-          placeholder="There is a significant difference / relationship between..."
+          placeholder="24 h treatment group shows significantly greater numr-1 expression than control."
           rows={2}
           className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600/30 resize-none"
         />

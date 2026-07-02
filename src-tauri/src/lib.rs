@@ -641,6 +641,44 @@ async fn search_pubmed(
     Ok(articles)
 }
 
+/// Flatten a (possibly transparent) PNG onto an opaque white background and
+/// return the re-encoded PNG bytes. Vega exports figures with a transparent
+/// background, and compositing white in the WebKit webview is unreliable, so we
+/// do it here in Rust where it's deterministic.
+#[tauri::command]
+fn flatten_png_white(png: Vec<u8>) -> Result<Vec<u8>, String> {
+    use image::{ImageFormat, Rgba, RgbaImage};
+    let src = image::load_from_memory_with_format(&png, ImageFormat::Png)
+        .map_err(|e| format!("decode PNG: {}", e))?
+        .to_rgba8();
+    let (w, h) = src.dimensions();
+    let mut out = RgbaImage::from_pixel(w, h, Rgba([255, 255, 255, 255]));
+    for (x, y, p) in src.enumerate_pixels() {
+        let a = p[3] as f32 / 255.0;
+        let over = |c: u8| (c as f32 * a + 255.0 * (1.0 - a)).round().clamp(0.0, 255.0) as u8;
+        out.put_pixel(x, y, Rgba([over(p[0]), over(p[1]), over(p[2]), 255]));
+    }
+    let mut buf = std::io::Cursor::new(Vec::new());
+    out.write_to(&mut buf, ImageFormat::Png)
+        .map_err(|e| format!("encode PNG: {}", e))?;
+    Ok(buf.into_inner())
+}
+
+/// Write raw bytes to an absolute path, creating parent directories as needed.
+/// Used by figure/data export. Done in Rust so writes are NOT subject to the
+/// tauri-plugin-fs scope allowlist — the user picks any folder via the dialog
+/// and we can write straight into it. Returns the path written.
+#[tauri::command]
+fn write_export_file(path: String, contents: Vec<u8>) -> Result<String, String> {
+    let p = std::path::Path::new(&path);
+    if let Some(parent) = p.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Could not create folder {}: {}", parent.display(), e))?;
+    }
+    std::fs::write(p, &contents).map_err(|e| format!("Could not write {}: {}", path, e))?;
+    Ok(path)
+}
+
 // ---------------------------------------------------------------------------
 // App entry point
 // ---------------------------------------------------------------------------
@@ -648,12 +686,19 @@ async fn search_pubmed(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            // Focus the existing window when a second instance is launched
+            // A second launch was attempted: instead of opening another window,
+            // reveal + raise the one that's already running, then let the new
+            // process exit. show() undoes a hidden window, unminimize() undoes a
+            // dock-minimized one, set_focus() brings it to the front.
             if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.unminimize();
                 let _ = w.set_focus();
             }
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let app_dir = app
                 .path()
@@ -697,6 +742,8 @@ pub fn run() {
             append_event,
             verify_chain,
             search_pubmed,
+            write_export_file,
+            flatten_png_white,
         ])
         .run(tauri::generate_context!())
         .expect("error while running LabVAR");

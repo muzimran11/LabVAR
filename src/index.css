@@ -50,3 +50,73 @@ table {
   border-collapse: collapse;
   width: 100%;
 }
+
+/* ==========================================================================
+   Light theme
+   --------------------------------------------------------------------------
+   The whole app is authored with dark-by-default `zinc-*` utility classes.
+   Rather than sprinkle `dark:` variants across every component, we scope a
+   set of overrides under `.light` on <html>. `.light .bg-zinc-900` has higher
+   specificity than the plain `.bg-zinc-900` utility, so these win whenever the
+   root carries the `light` class (toggled from the store). Semantic vega colors
+   live in PlotTab's LIGHT_CONFIG / DARK_CONFIG.
+   ========================================================================== */
+.light body {
+  background-color: #f4f4f5;
+  color: #18181b;
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+/* Backgrounds */
+.light .bg-zinc-950 { background-color: #f4f4f5; }
+.light .bg-zinc-900 { background-color: #ffffff; }
+.light .bg-zinc-800 { background-color: #f4f4f5; }
+.light .bg-zinc-700 { background-color: #e4e4e7; }
+.light .bg-zinc-600 { background-color: #d4d4d8; }
+.light .bg-zinc-400 { background-color: #a1a1aa; }
+.light .bg-zinc-800\/50 { background-color: rgba(228, 228, 231, 0.6); }
+.light .bg-zinc-900\/30 { background-color: rgba(244, 244, 245, 0.5); }
+
+/* Borders */
+.light .border-zinc-800 { border-color: #e4e4e7; }
+.light .border-zinc-700 { border-color: #d4d4d8; }
+.light .border-zinc-800\/50 { border-color: rgba(228, 228, 231, 0.7); }
+.light .divide-zinc-800 > * + * { border-color: #e4e4e7; }
+
+/* Text (inverted ramp) */
+.light .text-zinc-100 { color: #18181b; }
+.light .text-zinc-200 { color: #27272a; }
+.light .text-zinc-300 { color: #3f3f46; }
+.light .text-zinc-400 { color: #52525b; }
+.light .text-zinc-500 { color: #71717a; }
+.light .text-zinc-600 { color: #a1a1aa; }
+.light .text-zinc-700 { color: #c4c4cc; }
+
+/* Placeholders */
+.light .placeholder-zinc-600::placeholder { color: #a1a1aa; }
+.light .placeholder-zinc-500::placeholder { color: #b4b4bb; }
+
+/* Hover states */
+.light .hover\:bg-zinc-800:hover { background-color: #e4e4e7; }
+.light .hover\:bg-zinc-700:hover { background-color: #d4d4d8; }
+.light .hover\:bg-zinc-600:hover { background-color: #c4c4cc; }
+.light .hover\:bg-zinc-800\/70:hover { background-color: rgba(228, 228, 231, 0.8); }
+.light .hover\:bg-zinc-800\/50:hover { background-color: rgba(228, 228, 231, 0.6); }
+.light .hover\:text-zinc-100:hover { color: #18181b; }
+.light .hover\:text-zinc-200:hover { color: #27272a; }
+.light .hover\:text-zinc-300:hover { color: #3f3f46; }
+.light .hover\:text-zinc-400:hover { color: #52525b; }
+.light .hover\:border-zinc-700:hover { border-color: #d4d4d8; }
+
+/* Native form controls follow the theme (select dropdowns, etc.) */
+.light select,
+.light input,
+.light textarea {
+  color-scheme: light;
+}

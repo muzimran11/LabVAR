@@ -7,11 +7,12 @@ import { DesignTab } from '@/features/design/DesignTab';
 import { NotesTab } from '@/features/experiments/NotesTab';
 import type { ExperimentTab } from '@/store/useAppStore';
 
+// Hypothesis-first ordering: think it through, then import data, then plot & test.
 const TABS: { id: ExperimentTab; label: string }[] = [
-  { id: 'data', label: 'Data' },
-  { id: 'plots', label: 'Plots' },
-  { id: 'stats', label: 'Stats' },
-  { id: 'design', label: 'Design' },
+  { id: 'design', label: '1 · Hypothesis' },
+  { id: 'data', label: '2 · Data' },
+  { id: 'plots', label: '3 · Plots' },
+  { id: 'stats', label: '4 · Stats' },
   { id: 'notes', label: 'Notes' },
 ];
 

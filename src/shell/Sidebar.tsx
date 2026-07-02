@@ -14,7 +14,8 @@ export function Sidebar() {
   const setActiveExperiment = useAppStore((s) => s.setActiveExperiment);
   const setModalOpen = useAppStore((s) => s.setModalOpen);
   const loadExperiments = useAppStore((s) => s.loadExperiments);
-  const datasets = useAppStore((s) => s.datasets);
+  const theme = useAppStore((s) => s.theme);
+  const toggleTheme = useAppStore((s) => s.toggleTheme);
 
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -274,12 +275,31 @@ export function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-zinc-800">
+      <div className="px-4 py-3 border-t border-zinc-800 flex items-center justify-between">
         <button
           onClick={() => { setView('home'); setActiveExperiment(null); }}
           className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors cursor-pointer"
         >
           Local-first research tool
+        </button>
+        <button
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label="Toggle color theme"
+          className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+        >
+          {theme === 'dark' ? (
+            // Sun
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <circle cx="12" cy="12" r="4" />
+              <path strokeLinecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+            </svg>
+          ) : (
+            // Moon
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+          )}
         </button>
       </div>
     </aside>

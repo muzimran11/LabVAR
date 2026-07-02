@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability set for the LabVAR main window: core defaults plus opener, and the dialog + filesystem permissions needed for project-folder export (directory picker, recursive mkdir, write files).",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:default",
+    "fs:allow-write-file",
+    "fs:allow-mkdir",
+    "fs:allow-exists"
+  ]
+}

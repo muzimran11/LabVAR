@@ -71,12 +71,36 @@ export interface Note {
 
 export type View = 'home' | 'experiment' | 'inventory' | 'design';
 export type ExperimentTab = 'data' | 'plots' | 'stats' | 'design' | 'notes';
+export type Theme = 'dark' | 'light';
+
+/** Read the persisted theme (defaults to dark). Safe on first run. */
+function initialTheme(): Theme {
+  try {
+    const t = localStorage.getItem('labvar.theme');
+    if (t === 'light' || t === 'dark') return t;
+  } catch {
+    /* localStorage may be unavailable */
+  }
+  return 'dark';
+}
+
+/** Reflect the theme onto <html> so CSS `.light` / `.dark` overrides apply. */
+export function applyThemeClass(theme: Theme) {
+  const root = document.documentElement;
+  root.classList.toggle('light', theme === 'light');
+  root.classList.toggle('dark', theme === 'dark');
+}
 
 interface AppState {
   // Navigation
   view: View;
   activeExperimentId: string | null;
   experimentTab: ExperimentTab;
+
+  // Appearance
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
 
   // Data
   experiments: Experiment[];
@@ -129,7 +153,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Navigation
   view: 'home',
   activeExperimentId: null,
-  experimentTab: 'data',
+  experimentTab: 'design',
+
+  // Appearance
+  theme: initialTheme(),
+  setTheme: (theme) => {
+    try {
+      localStorage.setItem('labvar.theme', theme);
+    } catch {
+      /* ignore */
+    }
+    applyThemeClass(theme);
+    set({ theme });
+  },
+  toggleTheme: () => get().setTheme(get().theme === 'dark' ? 'light' : 'dark'),
 
   // Data
   experiments: [],
@@ -148,7 +185,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Navigation actions
   setView: (view) => set({ view }),
-  setActiveExperiment: (id) => set({ activeExperimentId: id, experimentTab: 'data' }),
+  setActiveExperiment: (id) => set({ activeExperimentId: id, experimentTab: 'design' }),
   setExperimentTab: (tab) => set({ experimentTab: tab }),
   setActiveDataset: (id) => {
     set({ activeDatasetId: id });

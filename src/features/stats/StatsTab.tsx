@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { saveTestResult } from '@/lib/invoke';
+import { saveText, getProjectDir, saveIntoDir, safeSegment } from '@/lib/exportFile';
 import { parseTable, inferCondition } from '@/lib/labdata';
 import {
   oneWayAnova,
@@ -85,6 +86,75 @@ function statsToCsv(result: Result): string {
 
 function csvCell(s: string): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/** Serialize a stats result into a human-readable plain-text report. */
+function statsToText(result: Result, datasetName?: string): string {
+  const L: string[] = [];
+  const rule = '─'.repeat(52);
+  L.push(`LabVAR — statistical test report`);
+  if (datasetName) L.push(`Dataset: ${datasetName}`);
+  L.push(`Generated: ${new Date().toISOString()}`);
+  L.push(rule);
+
+  if (result.kind === 'anova') {
+    const a = result.anova;
+    const ctrl = new Set(result.controls);
+    L.push('One-way ANOVA');
+    L.push('');
+    L.push(`  F(${a.dfBetween}, ${a.dfWithin}) = ${num(a.F, 4)}`);
+    L.push(`  p = ${formatP(a.pValue)} ${stars(a.pValue)}`);
+    L.push(`  Groups (k) = ${a.k}`);
+    L.push('');
+    L.push('  Source          SS          df      MS          F');
+    L.push(`  Between   ${num(a.ssBetween, 3).padStart(10)}  ${String(a.dfBetween).padStart(4)}  ${num(a.msBetween, 3).padStart(10)}  ${num(a.F, 4).padStart(8)}`);
+    L.push(`  Within    ${num(a.ssWithin, 3).padStart(10)}  ${String(a.dfWithin).padStart(4)}  ${num(a.msWithin, 3).padStart(10)}`);
+    L.push(`  Total     ${num(a.ssBetween + a.ssWithin, 3).padStart(10)}  ${String(a.dfBetween + a.dfWithin).padStart(4)}`);
+    L.push('');
+    L.push('Group summary');
+    for (const g of a.groups) {
+      const role = ctrl.has(g.name) ? 'control' : 'experiment';
+      L.push(`  ${g.name}  (${role}): n=${g.n}, mean=${num(g.mean, 4)}, SD=${num(g.sd, 4)}, SEM=${num(g.sem, 4)}`);
+    }
+    L.push('');
+    L.push('Tukey HSD — pairwise comparisons');
+    for (const t of result.tukey) {
+      L.push(
+        `  ${t.a} vs ${t.b}: Δ=${num(t.meanDiff, 3)}, 95% CI [${num(t.ciLow, 2)}, ${num(t.ciHigh, 2)}], q=${num(t.q, 3)}, p(adj)=${formatP(t.pValue)} ${stars(t.pValue)}${t.significant ? '' : ' (ns)'}`
+      );
+    }
+    L.push('');
+    L.push('Significance: **** p<0.0001 · *** p<0.001 · ** p<0.01 · * p<0.05 · ns not significant.');
+    L.push('Tukey p-values are family-wise adjusted (studentized range).');
+  } else if (result.kind === 'ttest') {
+    const r = result.res;
+    const label = r.test === 'paired' ? 'Paired t-test' : "Welch's unpaired t-test";
+    L.push(label);
+    L.push('');
+    L.push(`  t(${num(r.df, 2)}) = ${num(r.t, 4)}`);
+    L.push(`  p = ${formatP(r.pValue)} ${stars(r.pValue)}`);
+    L.push(`  Mean difference = ${num(r.meanDiff, 4)}`);
+    L.push('');
+    L.push('Group summary');
+    for (const g of result.groups) {
+      L.push(`  ${g.name}: n=${g.n}, mean=${num(g.mean, 4)}, SD=${num(g.sd, 4)}, SEM=${num(g.sem, 4)}`);
+    }
+    L.push('');
+    L.push(
+      r.pValue < 0.05
+        ? `Conclusion: the two groups differ significantly (p = ${formatP(r.pValue)}).`
+        : `Conclusion: no significant difference between the two groups (p = ${formatP(r.pValue)}).`
+    );
+  } else {
+    const r = result.res;
+    L.push('Pearson correlation');
+    L.push('');
+    L.push(`  ${result.cols[0]} vs ${result.cols[1]}`);
+    L.push(`  r = ${num(r.r, 4)},  r² = ${num(r.r * r.r, 4)}  (${(r.r * r.r * 100).toFixed(1)}% shared variance)`);
+    L.push(`  p = ${formatP(r.pValue)} ${stars(r.pValue)},  n = ${r.n}`);
+  }
+  L.push(rule);
+  return L.join('\n') + '\n';
 }
 
 export function StatsTab() {
@@ -195,19 +265,43 @@ export function StatsTab() {
     }
   };
 
+  const [exportMsg, setExportMsg] = useState('');
+  const flashExport = (m: string) => {
+    setExportMsg(m);
+    setTimeout(() => setExportMsg(''), 2500);
+  };
+
+  // Write a stats export: into the experiment's project folder (alongside the
+  // figure, under <root>/<dataset>/) when one is bound, else prompt / download.
+  const routeStatsExport = async (filename: string, text: string, filters: { name: string; extensions: string[] }[]) => {
+    const dir = activeExperimentId ? getProjectDir(activeExperimentId) : undefined;
+    if (dir) {
+      try {
+        await saveIntoDir(dir, safeSegment(activeDataset?.name || 'stats'), filename, text);
+        flashExport('Saved to folder ✓');
+        return;
+      } catch (err) {
+        console.warn('Project-folder write failed, falling back:', err);
+      }
+    }
+    const res = await saveText(text, filename, filters);
+    if (res.saved) flashExport(res.via === 'download' ? 'Downloaded ✓' : 'Exported ✓');
+  };
+
+  const safeStats = (activeDataset?.name || 'stats').replace(/[^\w.-]+/g, '_');
+
   const exportStatsCsv = () => {
     if (!result) return;
-    const csv = statsToCsv(result);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const safe = (activeDataset?.name || 'stats').replace(/[^\w.-]+/g, '_');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${safe}_${result.kind}_stats.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    void routeStatsExport(`${safeStats}_${result.kind}_stats.csv`, statsToCsv(result), [
+      { name: 'CSV data', extensions: ['csv'] },
+    ]);
+  };
+
+  const exportStatsTxt = () => {
+    if (!result) return;
+    void routeStatsExport(`${safeStats}_${result.kind}_stats.txt`, statsToText(result, activeDataset?.name), [
+      { name: 'Text report', extensions: ['txt'] },
+    ]);
   };
 
   if (!activeDataset) {
@@ -334,11 +428,19 @@ export function StatsTab() {
 
       {/* Results */}
       {result && (
-        <div className="flex justify-end -mb-3">
+        <div className="flex justify-end items-center gap-2 -mb-3">
+          {exportMsg && <span className="text-xs text-teal-400">{exportMsg}</span>}
+          <button
+            onClick={exportStatsTxt}
+            className="px-3 py-1.5 text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded transition-colors font-medium"
+            title="Export a readable .txt report (lands in the figure's project folder if one is set)"
+          >
+            Export TXT
+          </button>
           <button
             onClick={exportStatsCsv}
             className="px-3 py-1.5 text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded transition-colors font-medium"
-            title="Download the full stats table as CSV"
+            title="Export the full stats table as CSV (lands in the figure's project folder if one is set)"
           >
             Export CSV
           </button>
