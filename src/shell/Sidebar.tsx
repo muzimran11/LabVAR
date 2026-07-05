@@ -293,8 +293,13 @@ export function Sidebar() {
 
       </div>
 
+      {/* Copyright — subtle attribution */}
+      <div className="px-3 pt-2 pb-1 text-[9px] text-zinc-600 text-center font-mono tracking-wider border-t border-zinc-800/50">
+        © 2026 MUZAMMIL IMRAN · APACHE-2.0
+      </div>
+
       {/* Footer — account + settings */}
-      <div className="px-3 py-3 border-t border-zinc-800 flex items-center gap-2">
+      <div className="px-3 py-3 flex items-center gap-2">
         <button
           onClick={() => openWorkspace('settings')}
           className="flex items-center gap-2 flex-1 min-w-0 rounded-md px-1.5 py-1 hover:bg-zinc-800 transition-colors group"

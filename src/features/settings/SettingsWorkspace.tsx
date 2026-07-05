@@ -272,8 +272,46 @@ export function SettingsWorkspace() {
           </div>
         </section>
 
+        {/* About */}
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+          <h3 className="text-sm font-semibold text-zinc-200 mb-4">About LabVAR</h3>
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400">Version</span>
+              <span className="text-zinc-200 font-mono">0.1.0</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400">License</span>
+              <a
+                href="https://www.apache.org/licenses/LICENSE-2.0"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-teal-400 hover:text-teal-300 font-mono"
+              >
+                Apache 2.0
+              </a>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400">Source</span>
+              <a
+                href="https://github.com/muzimran11/LabVAR"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-teal-400 hover:text-teal-300 font-mono truncate max-w-[240px]"
+              >
+                github.com/muzimran11/LabVAR
+              </a>
+            </div>
+            <div className="pt-3 border-t border-zinc-800 text-zinc-500 leading-relaxed">
+              Copyright © 2026 Muzammil Imran. Distributed under the Apache License 2.0.
+              LabVAR is provided as-is, without warranty of any kind. All data stays on
+              your machine.
+            </div>
+          </div>
+        </section>
+
         <p className="text-xs text-zinc-600 text-center pb-4">
-          LabVAR — All data stays on your machine
+          LabVAR v0.1.0 · © 2026 Muzammil Imran · All data stays on your machine
         </p>
       </div>
     </Workspace>

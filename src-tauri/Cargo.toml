@@ -2,7 +2,10 @@
 name = "labvar"
 version = "0.1.0"
 description = "LabVAR — local-first research tool for scientists"
-authors = ["LabVAR Contributors"]
+authors = ["Muzammil Imran <muzimran11@gmail.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/muzimran11/LabVAR"
+homepage = "https://github.com/muzimran11/LabVAR"
 edition = "2021"
 rust-version = "1.70"
 
