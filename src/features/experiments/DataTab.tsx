@@ -1,8 +1,25 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { importDataset, getDataset } from '@/lib/invoke';
+import { importDataset, getDataset, deleteDataset } from '@/lib/invoke';
 import { DataTable, createColumnsFromKeys } from '@/components/DataTable';
 import { parseTable } from '@/lib/labdata';
+import { getProjectDir, saveIntoDir, safeSegment } from '@/lib/exportFile';
+
+/**
+ * If this experiment has a bound project folder, drop a copy of the imported CSV
+ * into <projectDir>/data/ so the raw data lives with the project on disk. Best
+ * effort: failures (no folder, browser preview) are swallowed — the dataset is
+ * already saved in the app either way.
+ */
+async function copyIntoProjectData(experimentId: string, name: string, csv: string) {
+  const dir = getProjectDir(experimentId);
+  if (!dir) return;
+  try {
+    await saveIntoDir(dir, 'data', `${safeSegment(name)}.csv`, csv);
+  } catch (err) {
+    console.warn('Could not copy dataset into project folder:', err);
+  }
+}
 
 /**
  * Read a picked file into CSV text. Real spreadsheets (.xlsx/.xls) are binary,
@@ -35,6 +52,19 @@ export function DataTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeDataset = datasets.find((d) => d.id === activeDatasetId);
+
+  const handleDeleteDataset = useCallback(async () => {
+    if (!activeExperimentId || !activeDatasetId) return;
+    const ds = datasets.find((d) => d.id === activeDatasetId);
+    if (!confirm(`Delete dataset "${ds?.name ?? ''}"? This also removes figures and stats derived from it.`)) return;
+    try {
+      await deleteDataset(activeDatasetId);
+      setActiveDataset(null);
+      await loadDatasets(activeExperimentId);
+    } catch (err) {
+      alert('Could not delete dataset: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  }, [activeExperimentId, activeDatasetId, datasets, loadDatasets, setActiveDataset]);
 
   // If csv_data is missing (list endpoint didn't include it), fetch the full dataset
   useEffect(() => {
@@ -83,6 +113,7 @@ export function DataTab() {
         return;
       }
       const newId = await importDataset(activeExperimentId, datasetName.trim(), content);
+      await copyIntoProjectData(activeExperimentId, datasetName.trim(), content);
       await loadDatasets(activeExperimentId);
       setActiveDataset(newId);
       setCsvText('');
@@ -114,6 +145,7 @@ export function DataTab() {
       }
       const name = datasetName.trim() || file.name.replace(/\.(csv|tsv|txt|xlsx|xlsm|xlsb|xls)$/i, '');
       const newId = await importDataset(activeExperimentId, name, content);
+      await copyIntoProjectData(activeExperimentId, name, content);
       await loadDatasets(activeExperimentId);
       setActiveDataset(newId);
       setDatasetName('');
@@ -158,12 +190,22 @@ export function DataTab() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setShowImport(!showImport)}
-          className="px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-500 text-white rounded transition-colors font-medium"
-        >
-          {showImport ? 'Cancel' : 'Import CSV'}
-        </button>
+        <div className="flex items-center gap-2">
+          {activeDataset && (
+            <button
+              onClick={handleDeleteDataset}
+              className="px-3 py-1.5 text-sm border border-zinc-700 text-zinc-400 hover:text-red-400 hover:border-red-900 rounded transition-colors"
+            >
+              Delete dataset
+            </button>
+          )}
+          <button
+            onClick={() => setShowImport(!showImport)}
+            className="px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-500 text-white rounded transition-colors font-medium"
+          >
+            {showImport ? 'Cancel' : 'Import CSV'}
+          </button>
+        </div>
       </div>
 
       {/* Import Panel */}

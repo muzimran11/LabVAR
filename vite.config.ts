@@ -13,6 +13,13 @@ export default defineConfig(async () => ({
     },
   },
 
+  // transformers.js pulls in Node-only deps (onnxruntime-node, sharp) that must
+  // NOT be bundled for the browser; exclude from pre-bundling and stub the
+  // Node-only entries so the web build resolves cleanly.
+  optimizeDeps: {
+    exclude: ["@huggingface/transformers", "onnxruntime-web"],
+  },
+
   // Vite options tailored for Tauri development
   clearScreen: false,
   server: {

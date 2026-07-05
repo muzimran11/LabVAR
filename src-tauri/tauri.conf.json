@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "LabVAR — Local-First Research Tool",
+        "title": "LabVAR",
         "width": 1280,
         "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
         "resizable": true,
         "fullscreen": false
       }
@@ -26,13 +28,31 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Local-first research tool for scientists",
+    "longDescription": "LabVAR is a free, open-source, local-first desktop app for researchers to design experiments, quantify data, plot results, and run a lab. Includes gel/GFP densitometry, offline statistics, drag-and-drop plotting, an assay tracker, lab math, image analysis, and a 3D graph notebook.",
+    "publisher": "LabVAR",
+    "copyright": "Apache-2.0",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      }
+    }
   },
   "plugins": {
     "opener": {}

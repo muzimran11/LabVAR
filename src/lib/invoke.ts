@@ -57,6 +57,10 @@ export async function getDataset(id: string): Promise<any> {
   return invoke('get_dataset', { id });
 }
 
+export async function deleteDataset(id: string): Promise<void> {
+  return invoke('delete_dataset', { id });
+}
+
 // ---- Figures ----
 export async function saveFigure(experimentId: string, datasetId: string, vegaSpec: string): Promise<string> {
   return invoke('save_figure', { experimentId, datasetId, vegaSpec });
@@ -68,6 +72,10 @@ export async function listFigures(experimentId: string): Promise<any[]> {
 
 export async function getFigure(id: string): Promise<any> {
   return invoke('get_figure', { id });
+}
+
+export async function deleteFigure(id: string): Promise<void> {
+  return invoke('delete_figure', { id });
 }
 
 // ---- Stats / Test Results ----
@@ -93,39 +101,8 @@ export async function listTestResults(experimentId: string): Promise<any[]> {
   return invoke('list_test_results', { experimentId });
 }
 
-// ---- Inventory: Stocks ----
-export async function listStocks(): Promise<any[]> {
-  return invoke('list_stocks');
-}
-
-export async function createStock(
-  name: string,
-  qty: number,
-  unit: string,
-  reorderAt: number
-): Promise<string> {
-  return invoke('create_stock', { name, qty, unit, reorderAt });
-}
-
-export async function updateStock(id: string, qty: number, reorderAt: number): Promise<string> {
-  return invoke('update_stock', { id, qty, reorderAt });
-}
-
-// ---- Inventory: Cultures ----
-export async function listCultures(): Promise<any[]> {
-  return invoke('list_cultures');
-}
-
-export async function createCulture(
-  name: string,
-  kind: string,
-  intervalDays: number
-): Promise<string> {
-  return invoke('create_culture', { name, kind, intervalDays });
-}
-
-export async function checkCulture(id: string): Promise<string> {
-  return invoke('check_culture', { id });
+export async function deleteTestResult(id: string): Promise<void> {
+  return invoke('delete_test_result', { id });
 }
 
 // ---- Hypotheses ----
@@ -158,7 +135,83 @@ export async function listNotes(experimentId: string): Promise<any[]> {
   return invoke('list_notes', { experimentId });
 }
 
+export async function deleteNote(id: string): Promise<void> {
+  return invoke('delete_note', { id });
+}
+
+// ---- Project folder: copy an input file into the experiment's directory ----
+/** Copy a source file (absolute path) into the project folder at `dest`. */
+export async function copyFile(src: string, dest: string): Promise<string> {
+  return invoke('copy_file', { src, dest });
+}
+
 // ---- PubMed ----
 export async function searchPubmed(query: string, maxResults: number): Promise<any[]> {
   return invoke('search_pubmed', { query, maxResults });
+}
+
+// ---- Image analysis: TIFF ingestion (Stage 1) ----
+export interface TiffMeta {
+  path: string;
+  name: string;
+  width: number;
+  height: number;
+  bits_per_sample: number;
+  samples: number;
+  pages: number;
+  error: string | null;
+}
+
+export interface DecodedTiff {
+  nat_w: number;
+  nat_h: number;
+  preview_w: number;
+  preview_h: number;
+  scale: number;
+  pages: number;
+  bits_per_sample: number;
+  samples: number;
+  raw_min: number;
+  raw_max: number;
+  applied_low: number;
+  applied_high: number;
+  /** `data:image/png;base64,...` grayscale preview (contrast-stretched, view-only). */
+  preview_png_base64: string;
+}
+
+/** List TIFF files (non-recursive) in a directory with header metadata. */
+export async function listTiffs(dir: string): Promise<TiffMeta[]> {
+  return invoke('list_tiffs', { dir });
+}
+
+/**
+ * Decode one page of a TIFF to a downsampled contrast-stretched preview.
+ * `low`/`high` set an explicit raw-intensity window; omit for auto (0.5–99.5 pct).
+ * Preview is view-only — never measure off it.
+ */
+export async function decodeTiff(
+  path: string,
+  opts?: { maxDim?: number; page?: number; low?: number; high?: number }
+): Promise<DecodedTiff> {
+  return invoke('decode_tiff', {
+    path,
+    maxDim: opts?.maxDim ?? null,
+    page: opts?.page ?? null,
+    low: opts?.low ?? null,
+    high: opts?.high ?? null,
+  });
+}
+
+// ---- AI Chart Builder: run generated Python/R scripts ----
+/**
+ * Execute a Python or R script in `workDir`. The Rust command writes the code
+ * to a temp file, runs the interpreter, and returns stdout on success or
+ * throws with stderr on failure.
+ */
+export async function runPlotScript(
+  code: string,
+  language: 'python' | 'r',
+  workDir: string
+): Promise<string> {
+  return invoke('run_plot_script', { code, language, workDir });
 }

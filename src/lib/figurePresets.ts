@@ -214,28 +214,6 @@ export const FIGURE_PRESETS: FigurePreset[] = [
     needs: { minGroups: 2 },
     showPoints: false,
   },
-  {
-    id: 'volcano',
-    label: 'Volcano plot',
-    description:
-      'log2 fold-change vs −log10(p) for differential expression. Needs a per-gene stats table.',
-    category: 'Genomics',
-    status: 'roadmap',
-    recommendedTest: 'none',
-    needs: { minGroups: 1, requiresFeatureStats: true },
-    showPoints: true,
-  },
-  {
-    id: 'heatmap',
-    label: 'Heatmap',
-    description:
-      'Expression matrix (genes × samples), optionally clustered. Needs a matrix input.',
-    category: 'Genomics',
-    status: 'roadmap',
-    recommendedTest: 'none',
-    needs: { minGroups: 1, requiresFeatureStats: true },
-    showPoints: false,
-  },
 ];
 
 /** Presets that can be drawn right now, for the picker. */

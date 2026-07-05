@@ -812,10 +812,10 @@ function FormatPanel({
 
 /** Toast text for a completed export, tailored to how/where it was saved. */
 function exportedMsg(res: SaveResult): string {
-  if (res.via === 'download') return 'Downloaded ✓';
+  if (res.via === 'download') return 'Downloaded';
   // Native writes (Save-As or project folder) report an absolute path.
-  if (res.via === 'tauri' && res.path?.includes('/')) return 'Saved to folder ✓';
-  return 'Exported ✓';
+  if (res.via === 'tauri' && res.path?.includes('/')) return 'Saved to folder';
+  return 'Exported';
 }
 
 export function PlotTab() {
@@ -996,7 +996,7 @@ export function PlotTab() {
     try {
       await saveFigure(activeExperimentId, activeDatasetId, JSON.stringify(spec));
       await loadFigures(activeExperimentId);
-      setSaveMsg('Saved ✓');
+      setSaveMsg('Saved');
       setTimeout(() => setSaveMsg(''), 2000);
     } catch (err) {
       setSaveMsg('Save failed');
@@ -1024,7 +1024,7 @@ export function PlotTab() {
       const dir = await chooseProjectDir(activeExperimentId);
       if (dir) {
         setProjectDirState(dir);
-        flash('Project folder set ✓');
+        flash('Project folder set');
       }
     } catch (err) {
       console.error('Choose folder failed:', err);
@@ -1313,7 +1313,7 @@ export function PlotTab() {
                   : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              ✳ Sig. bars
+              Sig. bars
             </button>
             {mode === 'concentration' && showSig && sigInfo.reason && (
               <span className="text-[11px] text-zinc-500">{sigInfo.reason}</span>
@@ -1328,7 +1328,7 @@ export function PlotTab() {
                   : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              ⚙ Format
+              Format
             </button>
           </div>
 

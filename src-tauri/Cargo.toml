@@ -28,3 +28,8 @@ chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
+# Scientific-TIFF decoding: the `tiff` crate preserves 16-bit / multi-page /
+# compressed samples that the browser-side UTIF path mangled. `base64` is used
+# to hand the downsampled preview PNG to the frontend as a data URL.
+tiff = "0.9"
+base64 = "0.22"

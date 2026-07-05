@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { addNote } from '@/lib/invoke';
+import { addNote, deleteNote } from '@/lib/invoke';
 
 export function NotesTab() {
   const activeExperimentId = useAppStore((s) => s.activeExperimentId);
@@ -30,6 +30,17 @@ export function NotesTab() {
     }
   };
 
+  const handleDeleteNote = useCallback(async (id: string) => {
+    if (!activeExperimentId) return;
+    if (!confirm('Delete this note?')) return;
+    try {
+      await deleteNote(id);
+      await loadNotes(activeExperimentId);
+    } catch (err) {
+      alert('Could not delete note: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  }, [activeExperimentId, loadNotes]);
+
   // Sort notes newest first
   const sortedNotes = [...notes].sort(
     (a, b) => new Date(b.created_ts).getTime() - new Date(a.created_ts).getTime()
@@ -48,7 +59,7 @@ export function NotesTab() {
           className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600/30 resize-none"
         />
         <div className="flex items-center justify-between">
-          <p className="text-xs text-zinc-600">Notes are append-only and cannot be edited after creation</p>
+          <p className="text-xs text-zinc-600">Notes save to the provenance log. You can delete them anytime.</p>
           <button
             onClick={handleAddNote}
             disabled={submitting || !content.trim()}
@@ -78,15 +89,23 @@ export function NotesTab() {
           {sortedNotes.map((note) => (
             <div
               key={note.id}
-              className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3"
+              className="group bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3"
             >
               <div className="flex items-start justify-between gap-4">
                 <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed flex-1">
                   {note.content}
                 </p>
-                <span className="text-[11px] text-zinc-600 font-mono whitespace-nowrap flex-shrink-0">
-                  {formatTimestamp(note.created_ts)}
-                </span>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-[11px] text-zinc-600 font-mono whitespace-nowrap">
+                    {formatTimestamp(note.created_ts)}
+                  </span>
+                  <button
+                    onClick={() => handleDeleteNote(note.id)}
+                    className="text-[11px] text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}

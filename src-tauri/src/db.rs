@@ -396,6 +396,33 @@ impl Database {
                 self.conn.execute("DELETE FROM notes WHERE experiment_id = ?1", params![entity_id]).ok();
             }
 
+            ("dataset", "deleted") => {
+                // Remove the dataset projection plus anything derived from it.
+                self.conn
+                    .execute("DELETE FROM datasets WHERE id = ?1", params![entity_id])
+                    .map_err(|e| format!("Failed to fold dataset deletion: {}", e))?;
+                self.conn.execute("DELETE FROM figures WHERE dataset_id = ?1", params![entity_id]).ok();
+                self.conn.execute("DELETE FROM test_results WHERE dataset_id = ?1", params![entity_id]).ok();
+            }
+
+            ("figure", "deleted") => {
+                self.conn
+                    .execute("DELETE FROM figures WHERE id = ?1", params![entity_id])
+                    .map_err(|e| format!("Failed to fold figure deletion: {}", e))?;
+            }
+
+            ("test", "deleted") => {
+                self.conn
+                    .execute("DELETE FROM test_results WHERE id = ?1", params![entity_id])
+                    .map_err(|e| format!("Failed to fold test deletion: {}", e))?;
+            }
+
+            ("note", "deleted") => {
+                self.conn
+                    .execute("DELETE FROM notes WHERE id = ?1", params![entity_id])
+                    .map_err(|e| format!("Failed to fold note deletion: {}", e))?;
+            }
+
             ("experiment", "archived") => {
                 self.conn
                     .execute("UPDATE experiments SET archived = 1 WHERE id = ?1", params![entity_id])

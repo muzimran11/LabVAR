@@ -36,23 +36,6 @@ export interface TestResult {
   scipy_version: string;
 }
 
-export interface Stock {
-  id: string;
-  name: string;
-  qty: number;
-  unit: string;
-  reorder_at: number;
-}
-
-export interface Culture {
-  id: string;
-  name: string;
-  kind: string;
-  interval_days: number;
-  last_checked_ts: string | null;
-  next_due: string | null;
-}
-
 export interface Hypothesis {
   id: string;
   experiment_id: string;
@@ -69,7 +52,19 @@ export interface Note {
   created_ts: string;
 }
 
-export type View = 'home' | 'experiment' | 'inventory' | 'design';
+// Top-level workspaces. Everything except `experiment` is usable standalone —
+// nothing is committed to an experiment/project from the jump (Claude-app model).
+export type View =
+  | 'home'
+  | 'experiment'
+  | 'design' // Experimental Design workspace
+  | 'plots' // Plotting & Stats builder (standalone)
+  | 'gel' // Gel / GFP densitometry
+  | 'assays' // Assay tracking (poor-man's Excel)
+  | 'labmath' // Lab math + quick notes
+  | 'image' // Image analysis (TIFF → SAM-assisted worm intensity)
+  | 'notebook' // 3D node-graph lab notebook
+  | 'settings'; // User preferences & account
 export type ExperimentTab = 'data' | 'plots' | 'stats' | 'design' | 'notes';
 export type Theme = 'dark' | 'light';
 
@@ -91,6 +86,59 @@ export function applyThemeClass(theme: Theme) {
   root.classList.toggle('dark', theme === 'dark');
 }
 
+// --- AI Chart Builder persisted state ---
+export type AiChartPhase = 'form' | 'generating' | 'code-review' | 'running' | 'result' | 'error';
+
+export interface AiChartCsvInfo {
+  fileName: string;
+  path: string;
+  dir: string;
+  columns: string[];
+  preview: string;
+  rawText: string;
+}
+
+export interface AiChartHistoryEntry {
+  id: string;
+  prompt: string;
+  colorScheme: string;
+  language: 'python' | 'r';
+  fileName: string;
+  timestamp: number;
+}
+
+export interface AiChartState {
+  csv: AiChartCsvInfo | null;
+  context: string;
+  colorScheme: string;
+  language: 'python' | 'r';
+  phase: AiChartPhase;
+  generatedCode: string;
+  streamingOutput: string;
+  runOutput: string;
+  errorMsg: string;
+  resultImageUrl: string;
+  correctionNote: string;
+  dataInterpretation: string;
+  requestHistory: AiChartHistoryEntry[];
+}
+
+const INITIAL_AI_CHART: AiChartState = {
+  csv: null,
+  context: '',
+  colorScheme: 'default',
+  language: 'python',
+  phase: 'form',
+  generatedCode: '',
+  streamingOutput: '',
+  runOutput: '',
+  errorMsg: '',
+  resultImageUrl: '',
+  correctionNote: '',
+  dataInterpretation: '',
+  requestHistory: [],
+};
+
 interface AppState {
   // Navigation
   view: View;
@@ -108,14 +156,23 @@ interface AppState {
   activeDatasetId: string | null;
   figures: Figure[];
   testResults: TestResult[];
-  stocks: Stock[];
-  cultures: Culture[];
   hypotheses: Hypothesis[];
   notes: Note[];
 
   // UI State
   modalOpen: string | null; // modal identifier or null
   loading: Record<string, boolean>;
+
+  // AI Chart Builder — persisted so navigating away doesn't lose work
+  aiChart: AiChartState;
+  updateAiChart: (partial: Partial<AiChartState>) => void;
+  resetAiChart: () => void;
+
+  // Deep-link: ask a workspace to focus a specific item after navigation
+  // (e.g. double-clicking a node in the notebook). The target workspace reads
+  // it on mount, selects the item, then clears it.
+  deepLink: { view: View; itemId: string } | null;
+  setDeepLink: (d: { view: View; itemId: string } | null) => void;
 
   // Navigation actions
   setView: (view: View) => void;
@@ -129,8 +186,6 @@ interface AppState {
   setDatasets: (datasets: Dataset[]) => void;
   setFigures: (figures: Figure[]) => void;
   setTestResults: (results: TestResult[]) => void;
-  setStocks: (stocks: Stock[]) => void;
-  setCultures: (cultures: Culture[]) => void;
   setHypotheses: (hypotheses: Hypothesis[]) => void;
   setNotes: (notes: Note[]) => void;
 
@@ -140,8 +195,6 @@ interface AppState {
   // Async data loaders (call invoke, then set state)
   loadExperiments: () => Promise<void>;
   loadDatasets: (experimentId: string) => Promise<void>;
-  loadStocks: () => Promise<void>;
-  loadCultures: () => Promise<void>;
   loadFigures: (experimentId: string) => Promise<void>;
   loadTestResults: (experimentId: string) => Promise<void>;
   loadNotes: (experimentId: string) => Promise<void>;
@@ -174,14 +227,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeDatasetId: null,
   figures: [],
   testResults: [],
-  stocks: [],
-  cultures: [],
   hypotheses: [],
   notes: [],
+
+  // AI Chart Builder
+  aiChart: { ...INITIAL_AI_CHART },
+  updateAiChart: (partial) => set((s) => ({ aiChart: { ...s.aiChart, ...partial } })),
+  resetAiChart: () => set((s) => ({ aiChart: { ...INITIAL_AI_CHART, requestHistory: s.aiChart.requestHistory } })),
 
   // UI State
   modalOpen: null,
   loading: {},
+  deepLink: null,
+  setDeepLink: (deepLink) => set({ deepLink }),
 
   // Navigation actions
   setView: (view) => set({ view }),
@@ -198,8 +256,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setDatasets: (datasets) => set({ datasets }),
   setFigures: (figures) => set({ figures }),
   setTestResults: (results) => set({ testResults: results }),
-  setStocks: (stocks) => set({ stocks }),
-  setCultures: (cultures) => set({ cultures }),
   setHypotheses: (hypotheses) => set({ hypotheses }),
   setNotes: (notes) => set({ notes }),
 
@@ -256,34 +312,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       }));
     } catch (e) {
       console.error('Failed to load dataset detail:', e);
-    }
-  },
-
-  loadStocks: async () => {
-    const { setLoading, setStocks } = get();
-    setLoading('stocks', true);
-    try {
-      const { listStocks } = await import('@/lib/invoke');
-      const stocks = await listStocks();
-      setStocks(stocks);
-    } catch (e) {
-      console.error('Failed to load stocks:', e);
-    } finally {
-      setLoading('stocks', false);
-    }
-  },
-
-  loadCultures: async () => {
-    const { setLoading, setCultures } = get();
-    setLoading('cultures', true);
-    try {
-      const { listCultures } = await import('@/lib/invoke');
-      const cultures = await listCultures();
-      setCultures(cultures);
-    } catch (e) {
-      console.error('Failed to load cultures:', e);
-    } finally {
-      setLoading('cultures', false);
     }
   },
 

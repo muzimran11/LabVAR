@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { saveTestResult } from '@/lib/invoke';
+import { saveTestResult, deleteTestResult } from '@/lib/invoke';
 import { saveText, getProjectDir, saveIntoDir, safeSegment } from '@/lib/exportFile';
 import { parseTable, inferCondition } from '@/lib/labdata';
 import {
@@ -278,14 +278,14 @@ export function StatsTab() {
     if (dir) {
       try {
         await saveIntoDir(dir, safeSegment(activeDataset?.name || 'stats'), filename, text);
-        flashExport('Saved to folder ✓');
+        flashExport('Saved to folder');
         return;
       } catch (err) {
         console.warn('Project-folder write failed, falling back:', err);
       }
     }
     const res = await saveText(text, filename, filters);
-    if (res.saved) flashExport(res.via === 'download' ? 'Downloaded ✓' : 'Exported ✓');
+    if (res.saved) flashExport(res.via === 'download' ? 'Downloaded' : 'Exported');
   };
 
   const safeStats = (activeDataset?.name || 'stats').replace(/[^\w.-]+/g, '_');
@@ -453,7 +453,24 @@ export function StatsTab() {
       {/* Previous results */}
       {testResults.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Previous Results</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Previous Results</h3>
+            <button
+              onClick={async () => {
+                if (!activeExperimentId) return;
+                if (!confirm('Delete ALL saved results for this experiment?')) return;
+                try {
+                  await Promise.all(testResults.map((tr) => deleteTestResult(tr.id)));
+                  await loadTestResults(activeExperimentId);
+                } catch (err) {
+                  alert('Could not clear results: ' + (err instanceof Error ? err.message : String(err)));
+                }
+              }}
+              className="text-xs text-zinc-500 hover:text-red-400"
+            >
+              Clear all
+            </button>
+          </div>
           <div className="space-y-1.5">
             {testResults.map((tr) => {
               const params = (() => { try { return JSON.parse(tr.params_json); } catch { return {}; } })();
@@ -461,18 +478,34 @@ export function StatsTab() {
               const columns: string[] = params.columns ?? [];
               const pValue: number | undefined = res.p_value;
               return (
-                <div key={tr.id} className="flex items-center justify-between px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg">
+                <div key={tr.id} className="group flex items-center justify-between px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-sm text-zinc-300 font-medium flex-shrink-0">
                       {STAT_TESTS.find((t) => t.id === tr.test)?.label ?? tr.test}
                     </span>
                     <span className="text-xs text-zinc-600 font-mono truncate">{columns.join(', ')}</span>
                   </div>
-                  {pValue !== undefined && (
-                    <span className={`text-sm font-mono flex-shrink-0 ${pValue < 0.05 ? 'text-teal-400' : 'text-zinc-400'}`}>
-                      p = {formatP(pValue)} {stars(pValue)}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {pValue !== undefined && (
+                      <span className={`text-sm font-mono ${pValue < 0.05 ? 'text-teal-400' : 'text-zinc-400'}`}>
+                        p = {formatP(pValue)} {stars(pValue)}
+                      </span>
+                    )}
+                    <button
+                      onClick={async () => {
+                        if (!activeExperimentId) return;
+                        try {
+                          await deleteTestResult(tr.id);
+                          await loadTestResults(activeExperimentId);
+                        } catch (err) {
+                          alert('Could not delete result: ' + (err instanceof Error ? err.message : String(err)));
+                        }
+                      }}
+                      className="text-[11px] text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               );
             })}

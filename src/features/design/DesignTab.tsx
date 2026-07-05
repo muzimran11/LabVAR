@@ -202,12 +202,12 @@ export function DesignTab() {
       <section>
         <SectionHeader number={3} title="Hypothesis" />
         <p className="text-xs text-zinc-500 mb-2">
-          The effect you expect. e.g. &ldquo;FUdR upregulates <em>numr-1</em>.&rdquo;
+          The effect you expect. e.g. &ldquo;Treatment X upregulates gene Y.&rdquo;
         </p>
         <textarea
           value={hypothesis || existingHyp?.hypothesis || ''}
           onChange={(e) => setHypothesis(e.target.value)}
-          placeholder="FUdR treatment increases numr-1 expression."
+          placeholder="Treatment X increases gene Y expression."
           rows={3}
           className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600/30 resize-none"
         />
@@ -222,7 +222,7 @@ export function DesignTab() {
         <textarea
           value={nullH || existingHyp?.null_h || ''}
           onChange={(e) => setNullH(e.target.value)}
-          placeholder="numr-1 expression does not differ between FUdR-treated and control."
+          placeholder="Gene Y expression does not differ between treated and control."
           rows={2}
           className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600/30 resize-none"
         />
@@ -233,12 +233,12 @@ export function DesignTab() {
         <SectionHeader number={5} title="Prediction (H&#x2081;) — what result would prove it" />
         <p className="text-xs text-zinc-500 mb-2">
           The concrete, measurable outcome that would support the hypothesis over the null.
-          e.g. &ldquo;24&nbsp;h FUdR-treated worms show higher <em>numr-1</em> expression than control.&rdquo;
+          e.g. &ldquo;24&nbsp;h treated samples show higher gene Y expression than control.&rdquo;
         </p>
         <textarea
           value={altH || existingHyp?.alt_h || ''}
           onChange={(e) => setAltH(e.target.value)}
-          placeholder="24 h treatment group shows significantly greater numr-1 expression than control."
+          placeholder="24 h treatment group shows significantly greater gene Y expression than control."
           rows={2}
           className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600/30 resize-none"
         />
