@@ -31,3 +31,4 @@ src-tauri/Frameworks/
 *.db-journal
 *.db-wal
 *.db-shm
+labvarfront/
